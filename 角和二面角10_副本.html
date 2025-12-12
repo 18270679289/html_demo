@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>从平面角到二面角：垂直拉伸演变</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        h1 {
+            margin: 0;
+            font-size: 2.2em;
+        }
+        .subtitle {
+            margin: 10px 0 0;
+            opacity: 0.9;
+        }
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 20px;
+        }
+        .scene-container {
+            flex: 3;
+            min-width: 500px;
+            height: 550px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: #000;
+        }
+        #scene3d {
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            flex: 2;
+            min-width: 300px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .slider-container {
+            background: #f1f3f5;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+        .slider {
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: #dee2e6;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        }
+        .buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        button {
+            flex: 1;
+            min-width: 120px;
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        .status {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .color-box {
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+        }
+        .explanation {
+            background: #f8f9fa;
+            padding: 25px;
+            border-left: 5px solid #3498db;
+            margin-top: 20px;
+            line-height: 1.7;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>从平面角到二面角：垂直拉伸演变</h1>
+            <p class="subtitle">平面角升维形成二面角 | 轨道交通服务专业数学课</p>
+        </div>
+        
+        <div class="content">
+            <div class="scene-container">
+                <div id="scene3d"></div>
+            </div>
+            
+            <div class="controls">
+                <div class="status" id="phaseText">初始状态：平面角（顶点O(0,0,0)，边OA沿X轴，边OB与X轴成45°）</div>
+                
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>拉伸高度控制</span>
+                        <span id="heightValue">0 单位</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="0" class="slider" id="heightSlider">
+                </div>
+                
+                <div class="buttons">
+                    <button onclick="startAnimation()">播放自动演变</button>
+                    <button onclick="pauseResumeAnimation()">暂停/继续</button>
+                    <button onclick="resetAnimation()">重置到平面角</button>
+                    <button onclick="toggleAutoRotate()">旋转视角</button>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="color-box" style="background-color: #e74c3c;"></div>
+                        <span>顶点 → 棱</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background-color: #3498db;"></div>
+                        <span>角的边（线段）</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background-color: #2ecc71;"></div>
+                        <span>二面角的棱</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="color-box" style="background-color: #9b59b6;"></div>
+                        <span>二面角的面</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化变量
+        let scene, camera, renderer, controls;
+        let objects = {};
+        let animationState = {
+            isAnimating: false,
+            isPaused: false,
+            autoRotate: false,
+            currentHeight: 0,
+            animationFrame: null
+        };
+        
+        // 常量定义 - 初始三角形顶点
+        const O = new THREE.Vector3(0, 0, 0);
+        const A = new THREE.Vector3(5, 0, 0);
+        const B = new THREE.Vector3(5, 5, 0);
+        const MAX_HEIGHT = 5; // 最大拉伸高度5单位
+        
+        // 初始化Three.js场景
+        function init() {
+            const container = document.getElementById('scene3d');
+            
+            // 创建场景
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a1a);
+            
+            // 创建相机
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(8, 6, 8);
+            
+            // 创建渲染器
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+            
+            // 添加轨道控制
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            
+            // 添加光源
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 10, 5);
+            scene.add(directionalLight);
+            
+            // 创建坐标轴和参考平面
+            createCoordinateSystem();
+            
+            // 创建初始几何对象
+            createInitialObjects();
+            
+            // 初始状态：显示平面角
+            updateVisualization(0);
+            
+            // 开始动画循环
+            animate();
+            
+            // 窗口大小调整监听
+            window.addEventListener('resize', onWindowResize);
+            
+            // 滑块事件监听
+            document.getElementById('heightSlider').addEventListener('input', function() {
+                const value = parseInt(this.value);
+                const height = (value / 100) * MAX_HEIGHT;
+                document.getElementById('heightValue').textContent = height.toFixed(1) + ' 单位';
+                updateVisualization(height);
+            });
+        }
+        
+        // 创建坐标系统
+        function createCoordinateSystem() {
+            // X轴 - 红色
+            const xAxis = new THREE.ArrowHelper(
+                new THREE.Vector3(1, 0, 0),
+                new THREE.Vector3(0, 0, 0),
+                10,
+                0xff4444
+            );
+            scene.add(xAxis);
+            
+            // Y轴 - 绿色
+            const yAxis = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 1, 0),
+                new THREE.Vector3(0, 0, 0),
+                10,
+                0x44ff44
+            );
+            scene.add(yAxis);
+            
+            // Z轴 - 蓝色
+            const zAxis = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(0, 0, 0),
+                10,
+                0x4444ff
+            );
+            scene.add(zAxis);
+            
+            // 创建XOY平面（半透明网格）
+            const gridGeometry = new THREE.PlaneGeometry(15, 15);
+            const gridMaterial = new THREE.MeshBasicMaterial({
+                color: 0x333333,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.2,
+                wireframe: true
+            });
+            const grid = new THREE.Mesh(gridGeometry, gridMaterial);
+            grid.rotation.x = Math.PI / 2; // 放在XOY平面
+            scene.add(grid);
+        }
+        
+        // 创建初始几何对象
+        function createInitialObjects() {
+            // 顶点O（红点）- 仅显示这个点
+            const pointGeometry = new THREE.SphereGeometry(0.15, 16, 16); // 稍微小一点
+            const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xe74c3c });
+            objects.pointO = new THREE.Mesh(pointGeometry, pointMaterial);
+            objects.pointO.position.copy(O);
+            
+            // 线段OA（蓝色）
+            const oaGeometry = new THREE.BufferGeometry().setFromPoints([O, A]);
+            const oaMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x3498db, 
+                linewidth: 5
+            });
+            objects.lineOA = new THREE.Line(oaGeometry, oaMaterial);
+            
+            // 线段OB（蓝色）
+            const obGeometry = new THREE.BufferGeometry().setFromPoints([O, B]);
+            const obMaterial = new THREE.LineBasicMaterial({ 
+                color: 0x3498db, 
+                linewidth: 5
+            });
+            objects.lineOB = new THREE.Line(obGeometry, obMaterial);
+            
+            // 平面OAA₁O₁（紫色）- 初始高度为0
+            objects.planeOAA1O1 = createRectangleGeometry(O, A, 0, 0x9b59b6);
+            objects.planeOAA1O1.visible = false;
+            
+            // 平面OBB₁O₁（红色）- 初始高度为0
+            objects.planeOBB1O1 = createRectangleGeometry(O, B, 0, 0xe74c3c);
+            objects.planeOBB1O1.visible = false;
+            
+            // 棱OO₁（绿线）- 初始高度为0
+            const lineOO1Geometry = new THREE.BufferGeometry().setFromPoints([
+                O,
+                new THREE.Vector3(O.x, O.y, 0)
+            ]);
+            const lineOO1Material = new THREE.LineBasicMaterial({ 
+                color: 0x2ecc71, 
+                linewidth: 4 
+            });
+            objects.lineOO1 = new THREE.Line(lineOO1Geometry, lineOO1Material);
+            objects.lineOO1.visible = false;
+            
+            // 添加角度标注弧线
+            // 计算OA和OB之间的角度
+            const vOA = new THREE.Vector3().subVectors(A, O);
+            const vOB = new THREE.Vector3().subVectors(B, O);
+            const angle = vOA.angleTo(vOB);
+            const arcGeometry = new THREE.BufferGeometry().setFromPoints(createArcPoints(0, angle, 2));
+            const arcMaterial = new THREE.LineBasicMaterial({ 
+                color: 0xffff00, 
+                linewidth: 2 
+            });
+            objects.arc = new THREE.Line(arcGeometry, arcMaterial);
+            
+            // 将所有对象添加到场景
+            scene.add(objects.pointO);
+            scene.add(objects.lineOA);
+            scene.add(objects.lineOB);
+            scene.add(objects.planeOAA1O1);
+            scene.add(objects.planeOBB1O1);
+            scene.add(objects.lineOO1);
+            scene.add(objects.arc);
+        }
+        
+        // 创建矩形平面的函数（由线段拉伸形成）
+        function createRectangleGeometry(startPoint, endPoint, height, color) {
+            // 计算方向向量
+            const direction = new THREE.Vector3().subVectors(endPoint, startPoint);
+            
+            // 创建几何体
+            const geometry = new THREE.BufferGeometry();
+            
+            // 创建顶点数据
+            const vertices = new Float32Array([
+                startPoint.x, startPoint.y, startPoint.z,          // 左下角
+                endPoint.x, endPoint.y, endPoint.z,                // 右下角
+                endPoint.x, endPoint.y, endPoint.z + height,       // 右上角
+                startPoint.x, startPoint.y, startPoint.z + height  // 左上角
+            ]);
+            
+            // 创建索引（两个三角形组成一个矩形）
+            const indices = [
+                0, 1, 2, // 第一个三角形
+                0, 2, 3  // 第二个三角形
+            ];
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            geometry.setIndex(indices);
+            
+            const material = new THREE.MeshBasicMaterial({
+                color: color,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            return new THREE.Mesh(geometry, material);
+        }
+        
+        // 更新矩形平面几何
+        function updateRectangleGeometry(plane, startPoint, endPoint, height) {
+            // 更新顶点数据
+            const vertices = new Float32Array([
+                startPoint.x, startPoint.y, startPoint.z,          // 左下角
+                endPoint.x, endPoint.y, endPoint.z,                // 右下角
+                endPoint.x, endPoint.y, endPoint.z + height,       // 右上角
+                startPoint.x, startPoint.y, startPoint.z + height  // 左上角
+            ]);
+            
+            plane.geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            plane.geometry.attributes.position.needsUpdate = true;
+        }
+        
+        // 创建圆弧点用于标注角度
+        function createArcPoints(startAngle, endAngle, radius) {
+            const points = [];
+            const segments = 32;
+            for (let i = 0; i <= segments; i++) {
+                const angle = startAngle + (endAngle - startAngle) * (i / segments);
+                points.push(new THREE.Vector3(
+                    radius * Math.cos(angle),
+                    radius * Math.sin(angle),
+                    0
+                ));
+            }
+            return points;
+        }
+        
+        // 更新可视化状态
+        function updateVisualization(height) {
+            animationState.currentHeight = height;
+            
+            // 更新顶点O的位置（沿着Z轴移动）
+            const O1 = new THREE.Vector3(O.x, O.y, height);
+            objects.pointO.position.copy(O1);
+            
+            // 计算A₁和B₁的位置
+            const A1 = new THREE.Vector3(A.x, A.y, height);
+            const B1 = new THREE.Vector3(B.x, B.y, height);
+            
+            // 更新线段OA（从O₁到A₁）
+            objects.lineOA.geometry.setFromPoints([O1, A1]);
+            objects.lineOA.geometry.attributes.position.needsUpdate = true;
+            
+            // 更新线段OB（从O₁到B₁）
+            objects.lineOB.geometry.setFromPoints([O1, B1]);
+            objects.lineOB.geometry.attributes.position.needsUpdate = true;
+            
+            // 更新平面OAA₁O₁
+            if (height > 0) {
+                objects.planeOAA1O1.visible = true;
+                updateRectangleGeometry(objects.planeOAA1O1, O, A, height);
+                
+                // 更新平面OBB₁O₁
+                objects.planeOBB1O1.visible = true;
+                updateRectangleGeometry(objects.planeOBB1O1, O, B, height);
+                
+                // 更新棱OO₁
+                objects.lineOO1.visible = true;
+                objects.lineOO1.geometry.setFromPoints([O, O1]);
+                objects.lineOO1.geometry.attributes.position.needsUpdate = true;
+            } else {
+                // 高度为0时，隐藏平面和棱
+                objects.planeOAA1O1.visible = false;
+                objects.planeOBB1O1.visible = false;
+                objects.lineOO1.visible = false;
+            }
+            
+            // 更新角度标注弧线的位置
+            objects.arc.position.z = height;
+            
+            // 根据高度调整透明度
+            const opacity = Math.min(0.8, 0.2 + (height / MAX_HEIGHT) * 0.6);
+            objects.planeOAA1O1.material.opacity = opacity;
+            objects.planeOBB1O1.material.opacity = opacity;
+            
+            // 更新状态文本
+            if (height === 0) {
+                document.getElementById('phaseText').textContent = 
+                    "初始状态：平面角（顶点O(0,0,0)，边OA沿X轴，边OB与X轴成45°）";
+            } else if (height < MAX_HEIGHT) {
+                document.getElementById('phaseText').textContent = 
+                    `拉伸中：高度 ${height.toFixed(1)} / ${MAX_HEIGHT.toFixed(1)}`;
+            } else {
+                document.getElementById('phaseText').textContent = 
+                    `拉伸完成`;
+            }
+        }
+        
+        // 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 如果正在播放自动动画且没有暂停
+            if (animationState.isAnimating && !animationState.isPaused) {
+                const increment = MAX_HEIGHT / 200; // 控制动画速度
+                let newHeight = animationState.currentHeight + increment;
+                
+                if (newHeight >= MAX_HEIGHT) {
+                    newHeight = MAX_HEIGHT;
+                    animationState.isAnimating = false;
+                }
+                
+                updateVisualization(newHeight);
+                
+                // 更新滑块位置
+                const sliderValue = (newHeight / MAX_HEIGHT) * 100;
+                document.getElementById('heightSlider').value = sliderValue;
+                document.getElementById('heightValue').textContent = newHeight.toFixed(1) + ' 单位';
+            }
+            
+            // 自动旋转
+            if (animationState.autoRotate) {
+                scene.rotation.y += 0.005;
+            }
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        // 控制函数
+        function startAnimation() {
+            if (!animationState.isAnimating || animationState.currentHeight >= MAX_HEIGHT) {
+                animationState.currentHeight = 0;
+                updateVisualization(0);
+                document.getElementById('heightSlider').value = 0;
+                document.getElementById('heightValue').textContent = '0 单位';
+            }
+            animationState.isAnimating = true;
+            animationState.isPaused = false;
+            animationState.autoRotate = false;
+        }
+        
+        function pauseResumeAnimation() {
+            animationState.isPaused = !animationState.isPaused;
+        }
+        
+        function resetAnimation() {
+            animationState.isAnimating = false;
+            animationState.isPaused = false;
+            animationState.autoRotate = false;
+            animationState.currentHeight = 0;
+            
+            updateVisualization(0);
+            
+            document.getElementById('heightSlider').value = 0;
+            document.getElementById('heightValue').textContent = '0 单位';
+            
+            controls.reset();
+            camera.position.set(8, 6, 8);
+        }
+        
+        function toggleAutoRotate() {
+            animationState.autoRotate = !animationState.autoRotate;
+        }
+        
+        function onWindowResize() {
+            const container = document.getElementById('scene3d');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
